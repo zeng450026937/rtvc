@@ -1,0 +1,9 @@
+is_component_build=true
+enable_iterator_debugging=true
+rtc_enable_symbol_export=true
+rtc_include_tests=false
+rtc_build_examples=false
+rtc_build_tools=false
+rtc_enable_protobuf=false
+rtc_build_ssl=false
+rtc_ssl_root="//third_party/openssl/include"
