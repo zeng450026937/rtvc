@@ -1,0 +1,9 @@
+{
+  "src/yealink/patches/build": "src/build",
+
+  "src/yealink/patches/libsrtp": "src/third_party/libsrtp",
+  
+  "src/yealink/patches/usrsctp": "src/third_party",
+
+  "src/yealink/patches/webrtc": "src"
+}

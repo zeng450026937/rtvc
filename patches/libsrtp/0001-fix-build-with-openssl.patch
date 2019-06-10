@@ -1,0 +1,26 @@
+From 864383628e1a416099d314febc571ed51e39f1a1 Mon Sep 17 00:00:00 2001
+From: zengsj <zengshuangjie@gmail.com>
+Date: Tue, 11 Jun 2019 14:09:22 +0800
+Subject: [PATCH] fix build with openssl
+
+---
+ BUILD.gn | 3 ++-
+ 1 file changed, 2 insertions(+), 1 deletion(-)
+
+diff --git a/BUILD.gn b/BUILD.gn
+index 6359585..f09c0d6 100644
+--- a/BUILD.gn
++++ b/BUILD.gn
+@@ -115,7 +115,8 @@ static_library("libsrtp") {
+     "srtp/srtp.c",
+   ]
+   public_deps = [
+-    "//third_party/boringssl:boringssl",
++    # "//third_party/boringssl:boringssl",
++    "//yealink/third_party/openssl:openssl",
+   ]
+ }
+ 
+-- 
+2.15.1.windows.2
+

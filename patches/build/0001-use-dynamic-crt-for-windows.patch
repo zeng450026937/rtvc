@@ -1,0 +1,25 @@
+From b1d554bd7d0c341f00d7c6aaa0d217ec79f79309 Mon Sep 17 00:00:00 2001
+From: zengsj <zengshuangjie@gmail.com>
+Date: Tue, 11 Jun 2019 14:04:28 +0800
+Subject: [PATCH 1/2] use dynamic crt for windows
+
+---
+ config/win/BUILD.gn | 2 +-
+ 1 file changed, 1 insertion(+), 1 deletion(-)
+
+diff --git a/config/win/BUILD.gn b/config/win/BUILD.gn
+index f09326af6..5ff4d388a 100644
+--- a/config/win/BUILD.gn
++++ b/config/win/BUILD.gn
+@@ -414,7 +414,7 @@ config("default_crt") {
+       configs = [ ":dynamic_crt" ]
+     } else {
+       # Desktop Windows: static CRT.
+-      configs = [ ":static_crt" ]
++      configs = [ ":dynamic_crt" ]
+     }
+   }
+ }
+-- 
+2.15.1.windows.2
+

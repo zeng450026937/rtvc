@@ -1,0 +1,31 @@
+From d9c052f020381a09f8220335a33ec450db4904c4 Mon Sep 17 00:00:00 2001
+From: zengsj <zengshuangjie@gmail.com>
+Date: Tue, 11 Jun 2019 14:05:31 +0800
+Subject: [PATCH 2/2] fix custom libcxx build for android
+
+---
+ config/android/BUILD.gn | 8 ++++++++
+ 1 file changed, 8 insertions(+)
+
+diff --git a/config/android/BUILD.gn b/config/android/BUILD.gn
+index b69d42b70..8689f073f 100644
+--- a/config/android/BUILD.gn
++++ b/config/android/BUILD.gn
+@@ -109,6 +109,14 @@ config("runtime_library") {
+                 rebase_path("$android_ndk_root/sources/android/support/include",
+                             root_build_dir) ]
+ 
++  if (!use_custom_libcxx) {
++    cflags_cc += [
++      "-isystem" +
++      rebase_path("$android_ndk_root/sources/cxx-stl/llvm-libc++/include",
++                  root_build_dir),
++    ]
++  }
++
+   defines = [
+     "__GNU_SOURCE=1",  # Necessary for clone().
+     "CHROMIUM_CXX_TWEAK_INLINES",  # Saves binary size.
+-- 
+2.15.1.windows.2
+

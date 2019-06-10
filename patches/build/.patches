@@ -1,0 +1,2 @@
+0001-use-dynamic-crt-for-windows.patch
+0002-fix-custom-libcxx-build-for-android.patch

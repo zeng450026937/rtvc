@@ -9,6 +9,8 @@ vars = {
   'checkout_webrtc': True,
   'checkout_pjsip': False,
   'checkout_resiprocate': False,
+
+  'apply_patches': True,
 }
 
 deps = {
@@ -27,6 +29,16 @@ deps = {
 }
 
 hooks = [
+  {
+    'name': 'patch_webrtc',
+    'condition': 'checkout_webrtc and apply_patches',
+    'pattern': 'src/yealink',
+    'action': [
+      'python',
+      'src/yealink/script/apply_all_patches.py',
+      'src/yealink/patches/config.json',
+    ],
+  },
   # download prebuild library.
 ]
 
