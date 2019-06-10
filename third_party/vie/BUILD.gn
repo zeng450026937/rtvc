@@ -1,0 +1,43 @@
+
+group("vie") {
+  # TODO: copy these files to root_out_dir
+  data = [
+    "$root_out_dir/avc_video_coding.dll",
+    "$root_out_dir/avcodec-57.dll",
+    "$root_out_dir/avformat-57.dll",
+    "$root_out_dir/avutil-55.dll",
+    "$root_out_dir/bandwidth_estimator.dll",
+    "$root_out_dir/common_video.dll",
+    "$root_out_dir/data_capture_module.dll",
+    "$root_out_dir/file_content_capture_module.dll",
+    "$root_out_dir/libgcc_s_dw2-1.dll",
+    "$root_out_dir/libwinpthread-1.dll",
+    "$root_out_dir/libx264-148.dll",
+    "$root_out_dir/multimedia.dll",
+    "$root_out_dir/multp.dll",
+    "$root_out_dir/nov_session.dll",
+    "$root_out_dir/rtp_rtcp_transport.dll",
+    "$root_out_dir/srtp.dll",
+    "$root_out_dir/svc_video_coding.dll",
+    "$root_out_dir/system_wrappers.dll",
+    "$root_out_dir/trpt.dll",
+    "$root_out_dir/video_capture.dll",
+    "$root_out_dir/video_capture_module.dll",
+    "$root_out_dir/video_processing.dll",
+    "$root_out_dir/video_render.dll",
+    "$root_out_dir/video_render_module.dll",
+    "$root_out_dir/zlib1.dll",
+  ]
+  public_configs = [
+    ":vie_config"
+  ]
+}
+
+config("vie_config") {
+  lib_dirs = [
+    "lib"
+  ]
+  libs = [
+    "multimedia.lib"
+  ]
+}

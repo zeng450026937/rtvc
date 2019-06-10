@@ -1,36 +1,82 @@
-import("//build/config/linux/pkg_config.gni")
-import("//build/config/sanitizers/sanitizers.gni")
 import("//webrtc.gni")
-
-if (rtc_enable_protobuf) {
-  import("//third_party/protobuf/proto_library.gni")
-}
-
-if (is_android) {
-  import("//build/config/android/config.gni")
-  import("//build/config/android/rules.gni")
-}
+import("//yealink/build/args/all.gni")
 
 group("yealink") {
   testonly = true
+
   deps = [
-    ":rtc_base",
-    ":audio_device",
+    ":rtvc",
   ]
+
+  if (yealink_build_examples) {
+    deps += [
+      "examples",
+    ]
+  }
 }
 
-rtc_static_library("rtc_base") {
+rtc_static_library("rtvc") {
+  testonly = true
+
+  visibility = [ "*" ]
+
+  sources = []
   complete_static_lib = true
   suppressed_configs += [ "//build/config/compiler:thin_archive" ]
+  defines = []
+
   deps = [
+    "rtc",
+    "//:webrtc_common",
+    "//api:libjingle_peerconnection_api",
+    "//api:transport_api",
+    "//audio",
+    "//call",
+    "//common_audio",
+    "//common_video",
+    "//logging:rtc_event_log_api",
+    "//logging:rtc_event_log_impl_base",
+    "//media",
+    "//modules",
+    "//modules/video_capture:video_capture_internal_impl",
+    "//p2p:rtc_p2p",
+    "//pc:libjingle_peerconnection",
+    "//pc:peerconnection",
+    "//pc:rtc_pc",
+    "//pc:rtc_pc_base",
     "//rtc_base",
+    "//sdk",
+    "//video",
   ]
-}
 
-rtc_static_library("audio_device") {
-  complete_static_lib = true
-  suppressed_configs += [ "//build/config/compiler:thin_archive" ]
-  deps = [
-    "//modules/audio_device"
-  ]
+  if (rtc_include_builtin_audio_codecs) {
+    deps += [
+      "//api/audio_codecs:builtin_audio_decoder_factory",
+      "//api/audio_codecs:builtin_audio_encoder_factory",
+    ]
+  }
+
+  if (rtc_include_builtin_video_codecs) {
+    deps += [
+      "//api/video_codecs:builtin_video_decoder_factory",
+      "//api/video_codecs:builtin_video_encoder_factory",
+    ]
+  }
+
+  if (build_with_mozilla) {
+    deps += [ "//api/video:video_frame" ]
+  } else {
+    deps += [
+      "//api",
+      "//logging",
+      "//p2p",
+      "//pc",
+      "//stats",
+    ]
+  }
+
+  if (rtc_enable_protobuf) {
+    defines += [ "ENABLE_RTC_EVENT_LOG" ]
+    deps += [ "//logging:rtc_event_log_proto" ]
+  }
 }

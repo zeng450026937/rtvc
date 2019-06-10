@@ -1,0 +1,31 @@
+# Copyright (c) 2015 The WebRTC project authors. All Rights Reserved.
+#
+# Use of this source code is governed by a BSD-style license
+# that can be found in the LICENSE file in the root of the source
+# tree. An additional intellectual property rights grant can be found
+# in the file PATENTS.  All contributing project authors may
+# be found in the AUTHORS file in the root of the source tree.
+
+import("//webrtc.gni")
+if (is_android) {
+  import("//build/config/android/config.gni")
+  import("//build/config/android/rules.gni")
+}
+
+group("api") {
+  visibility = [ "*" ]
+  deps = []
+}
+
+rtc_static_library("create_peerconnection_factory") {
+  testonly = true
+  visibility = [ "*" ]
+  sources = [
+    "create_peerconnection_factory.cc",
+    "create_peerconnection_factory.h",
+  ]
+  deps = [
+    "//api:create_peerconnection_factory",
+    "../rtc:media_engine"
+  ]
+}

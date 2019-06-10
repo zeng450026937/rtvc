@@ -1,0 +1,4 @@
+import("//yealink/build/args/all.gni")
+
+android32_ndk_api_level = 21
+use_custom_libcxx = false
