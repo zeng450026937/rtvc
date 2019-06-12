@@ -37,7 +37,7 @@ YealinkVideoTrackSource::~YealinkVideoTrackSource() {
   if (secondary_source_) {
     secondary_source_->UnsetDeliverySink(this);
   }
-};
+}
 
 bool YealinkVideoTrackSource::is_screencast() const {
   return is_screencast_;
