@@ -1,4 +1,3 @@
-android32_ndk_api_level = 21
 is_component_build = false
 enable_iterator_debugging = true
 rtc_enable_symbol_export = false

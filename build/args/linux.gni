@@ -1,0 +1,3 @@
+import("//yealink/build/args/all.gni")
+
+use_custom_libcxx = false
