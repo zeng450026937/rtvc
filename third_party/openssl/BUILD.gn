@@ -1,0 +1,10 @@
+
+group("openssl") {
+  public_configs = [
+    ":openssl_config"
+  ]
+}
+
+config("openssl_config") {
+  include_dirs = [ "include" ]
+}
