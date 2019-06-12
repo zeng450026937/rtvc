@@ -18,5 +18,8 @@ rm -r -f -d out/combined
 mkdir out/combined_debug
 mkdir out/combined
 
-./yealink/script/combine_libraries.sh out/arm_debug/obj/yealink/ out/arm64_debug/obj/yealink/ out/x64_debug/obj/yealink/ out/combined_debug
-./yealink/script/combine_libraries.sh out/arm/obj/yealink/ out/arm64/obj/yealink/ out/x64/obj/yealink/ out/combined/
+./yealink/script/combine_libraries.sh out/arm_debug/obj/ out/arm64_debug/obj/ out/combined_debug
+./yealink/script/combine_libraries.sh out/arm/obj/ out/arm64/obj/ out/combined/
+
+./yealink/script/combine_libraries.sh out/arm_debug/obj/yealink/ out/arm64_debug/obj/yealink/ out/combined_debug
+./yealink/script/combine_libraries.sh out/arm/obj/yealink/ out/arm64/obj/yealink/ out/combined/

@@ -15,6 +15,6 @@ echo "Matching up ${libraries[*]}..."
 
 for library in ${libraries[*]}
 do
-    lipo -create "${1}/${library}" "${2}/${library}" "${3}/${library}" -o "${4}/${library}"
-    lipo -info "${4}/${library}"
+    lipo -create "${1}/${library}" "${2}/${library}" -o "${3}/${library}"
+    lipo -info "${3}/${library}"
 done

@@ -5,6 +5,8 @@ group("yealink") {
   testonly = true
 
   deps = [
+    ":rtc_base",
+    ":audio_device",
     ":rtvc",
   ]
 
@@ -13,6 +15,22 @@ group("yealink") {
       "examples",
     ]
   }
+}
+
+rtc_static_library("rtc_base") {
+  complete_static_lib = true
+  suppressed_configs += [ "//build/config/compiler:thin_archive" ]
+  deps = [
+    "//rtc_base",
+  ]
+}
+
+rtc_static_library("audio_device") {
+  complete_static_lib = true
+  suppressed_configs += [ "//build/config/compiler:thin_archive" ]
+  deps = [
+    "//modules/audio_device"
+  ]
 }
 
 rtc_static_library("rtvc") {
