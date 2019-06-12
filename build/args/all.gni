@@ -1,3 +1,4 @@
+android32_ndk_api_level = 21
 is_component_build = false
 enable_iterator_debugging = true
 rtc_enable_symbol_export = false
@@ -7,6 +8,7 @@ rtc_build_tools = false
 rtc_enable_protobuf = true
 rtc_build_ssl = false
 rtc_ssl_root = "//yealink/third_party/openssl/include"
+use_custom_libcxx = false
 use_rtti = true
 
 declare_args() {
