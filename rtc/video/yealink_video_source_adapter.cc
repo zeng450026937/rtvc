@@ -48,6 +48,8 @@ int YealinkVideoSourceAdapter::SetDeliverySink(
   }
 
   broadcaster_.AddOrUpdateSink(sink_wrapper->GetSink(), wants);
+
+  return 0;
 }
 
 int YealinkVideoSourceAdapter::UnsetDeliverySink(
@@ -55,16 +57,19 @@ int YealinkVideoSourceAdapter::UnsetDeliverySink(
   RTC_DCHECK(sink != nullptr);
   RTC_DCHECK(FindSinkPair(sink));
 
-  sinks_.erase(std::remove_if(sinks_.begin(), sinks_.end(),
-                              [sink, this](const SinkPair& sink_pair) {
-                                if (sink_pair.sink->GetRawSink() == sink) {
-                                  broadcaster_.RemoveSink(sink_pair.sink->GetSink());
-                                  delete sink_pair.sink;
-                                  return true;
-                                }
-                                return false;
-                              }),
-               sinks_.end());
+  sinks_.erase(
+      std::remove_if(sinks_.begin(), sinks_.end(),
+                     [sink, this](const SinkPair& sink_pair) {
+                       if (sink_pair.sink->GetRawSink() == sink) {
+                         broadcaster_.RemoveSink(sink_pair.sink->GetSink());
+                         delete sink_pair.sink;
+                         return true;
+                       }
+                       return false;
+                     }),
+      sinks_.end());
+
+  return 0;
 }
 
 void YealinkVideoSourceAdapter::OnFrame(const webrtc::VideoFrame& frame) {
