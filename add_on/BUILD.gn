@@ -1,0 +1,16 @@
+import("//webrtc.gni")
+
+group("add_on") {
+  deps = [
+    ":sdp",
+  ]
+}
+
+rtc_source_set("sdp") {
+  visibility = [ "*" ]
+  sources = [
+    "content_patterns.h",
+    "content_patterns.cc",
+  ]
+  deps = []
+}
