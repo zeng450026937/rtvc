@@ -30,6 +30,9 @@ namespace multimedia
 	class VideoExternalTransportSink
 	{
 	public:
+		static int StartUpExternalTransport(VideoExternalTransportSink *trpt_cb);
+		static int ShutDown();
+
 		virtual int GetHandle(VideoTransportHandle handle) = 0;
 		virtual int ReleaseHandle(VideoTransportHandle handle) = 0;
 
