@@ -29,8 +29,6 @@ namespace cricket {
 
 namespace {
 
-const int kMinLayerSize = 16;
-
 // If this field trial is enabled, we will enable sending FlexFEC and disable
 // sending ULPFEC whenever the former has been negotiated in the SDPs.
 bool IsFlexfecFieldTrialEnabled() {
@@ -125,23 +123,6 @@ std::vector<VideoCodec> AssignPayloadTypesAndDefaultCodecs(
                          : std::vector<VideoCodec>();
 }
 
-int GetMaxFramerate(const webrtc::VideoEncoderConfig& encoder_config,
-                    size_t num_layers) {
-  int max_fps = -1;
-  for (size_t i = 0; i < num_layers; ++i) {
-    int fps = (encoder_config.simulcast_layers[i].max_framerate > 0)
-                  ? encoder_config.simulcast_layers[i].max_framerate
-                  : kDefaultVideoMaxFramerate;
-    max_fps = std::max(fps, max_fps);
-  }
-  return max_fps;
-}
-
-bool IsTemporalLayersSupported(const std::string& codec_name) {
-  return absl::EqualsIgnoreCase(codec_name, kVp8CodecName) ||
-         absl::EqualsIgnoreCase(codec_name, kVp9CodecName);
-}
-
 static std::string CodecVectorToString(const std::vector<VideoCodec>& codecs) {
   rtc::StringBuilder out;
   out << "{";
@@ -216,26 +197,6 @@ bool IsCodecBlacklistedForSimulcast(const std::string& codec_name) {
                    absl::EqualsIgnoreCase(codec_name, kVp9CodecName);
 }
 
-// The selected thresholds for QVGA and VGA corresponded to a QP around 10.
-// The change in QP declined above the selected bitrates.
-static int GetMaxDefaultVideoBitrateKbps(int width,
-                                         int height,
-                                         bool is_screenshare) {
-  int max_bitrate;
-  if (width * height <= 320 * 240) {
-    max_bitrate = 600;
-  } else if (width * height <= 640 * 480) {
-    max_bitrate = 1700;
-  } else if (width * height <= 960 * 540) {
-    max_bitrate = 2000;
-  } else {
-    max_bitrate = 2500;
-  }
-  if (is_screenshare)
-    max_bitrate = std::max(max_bitrate, 1200);
-  return max_bitrate;
-}
-
 bool GetVp9LayersFromFieldTrialGroup(size_t* num_spatial_layers,
                                      size_t* num_temporal_layers) {
   std::string group = webrtc::field_trial::FindFullName("WebRTC-SupportVP9SVC");
@@ -301,9 +262,6 @@ absl::optional<int> GetFallbackMinBpsFromFieldTrial() {
   return min_bps;
 }
 
-int GetMinVideoBitrateBps() {
-  return GetFallbackMinBpsFromFieldTrial().value_or(kMinVideoBitrateBps);
-}
 }  // namespace
 
 // This constant is really an on/off, lower-level configurable NACK history
