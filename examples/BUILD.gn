@@ -55,6 +55,7 @@ if (is_linux || is_win) {
       "//third_party/abseil-cpp/absl/memory",
       "//third_party/abseil-cpp/absl/types:optional",
       "../third_party/vie",
+      "../add_on",
       "../rtc:media_engine",
       "../rtc:media_video",
       "../api:create_peerconnection_factory",

@@ -28,14 +28,14 @@ rtc_source_set("media_video") {
   testonly = true
   visibility = [ "*" ]
   sources = [
-    "video/yealink_video_frame.h",
-    "video/yealink_video_frame.cc",
-    "video/yealink_video_sink.h",
-    "video/yealink_video_sink.cc",
-    "video/yealink_video_source_adapter.h",
-    "video/yealink_video_source_adapter.cc",
-    "video/yealink_video_track_source.h",
-    "video/yealink_video_track_source.cc",
+    "video/video_frame.h",
+    "video/video_frame.cc",
+    "video/video_sink.h",
+    "video/video_sink.cc",
+    "video/video_source_adapter.h",
+    "video/video_source_adapter.cc",
+    "video/video_track_source.h",
+    "video/video_track_source.cc",
   ]
   deps = [
     "//media:rtc_media_base",

@@ -21,11 +21,11 @@ group("vie") {
     "$root_out_dir/svc_video_coding.dll",
     "$root_out_dir/system_wrappers.dll",
     "$root_out_dir/trpt.dll",
-    "$root_out_dir/video_capture.dll",
     "$root_out_dir/video_capture_module.dll",
+    "$root_out_dir/video_capture.dll",
     "$root_out_dir/video_processing.dll",
-    "$root_out_dir/video_render.dll",
     "$root_out_dir/video_render_module.dll",
+    "$root_out_dir/video_render.dll",
     "$root_out_dir/zlib1.dll",
   ]
   public_configs = [

@@ -97,7 +97,7 @@ namespace multimedia
 	} VieEventIdType;
 
 
-	// ÊÓÆµ·Ö±æÂÊ±ä»¯ĞÅÏ¢
+	// è§†é¢‘åˆ†è¾¨ç‡å˜åŒ–ä¿¡æ¯
 	typedef struct tagVideoSizeChangeInfo
 	{
 		unsigned short old_width;
@@ -106,7 +106,7 @@ namespace multimedia
 		unsigned short new_height;
 	} VideoSizeChangeInfo;
 
-	// ÊÓÆµ½ÓÊÕ¶Ë´ø¿í·´À¡
+	// è§†é¢‘æ¥æ”¶ç«¯å¸¦å®½åé¦ˆ
 	typedef struct tagVideoFlowControlInfo
 	{
 		unsigned long stream_type; // 0, camera video; 1 data sharing video

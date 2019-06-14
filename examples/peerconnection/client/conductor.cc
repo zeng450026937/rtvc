@@ -24,7 +24,7 @@
 #include "api/audio_codecs/builtin_audio_decoder_factory.h"
 #include "api/audio_codecs/builtin_audio_encoder_factory.h"
 #include "api/audio_options.h"
-//#include "api/create_peerconnection_factory.h"
+#include "api/create_peerconnection_factory.h"
 #include "yealink/api/create_peerconnection_factory.h"
 #include "api/rtp_sender_interface.h"
 #include "api/video_codecs/builtin_video_decoder_factory.h"
@@ -46,8 +46,8 @@
 #include "test/vcm_capturer.h"
 
 #include "yealink/third_party/vie/include/multimedia_interface.h"
-#include "yealink/rtc/video/yealink_video_source_adapter.h"
-#include "yealink/rtc/video/yealink_video_track_source.h"
+#include "yealink/rtc/video/video_source_adapter.h"
+#include "yealink/rtc/video/video_track_source.h"
 
 namespace {
 // Names used for a IceCandidate JSON object.
@@ -125,14 +125,14 @@ class CapturerTrackSource : public webrtc::VideoTrackSource {
     source->Start(constraints);
     
     rtc::scoped_refptr<webrtc::VideoTrackSourceInterface> track_source =
-     new rtc::RefCountedObject<yealink::YealinkVideoTrackSource>(source, false, false);
+     new rtc::RefCountedObject<yealink::VideoTrackSource>(source, false, false);
 
     return track_source;
   }
 
-  static rtc::scoped_refptr<webrtc::VideoTrackSourceInterface> CreateWithSource(yealink::IVideoCaptureSource* source) {   
+  static rtc::scoped_refptr<webrtc::VideoTrackSourceInterface> CreateWithSource(multimedia::VideoFrameProvider* source) {   
     rtc::scoped_refptr<webrtc::VideoTrackSourceInterface> track_source =
-     new rtc::RefCountedObject<yealink::YealinkVideoTrackSource>(source, false, false);
+     new rtc::RefCountedObject<yealink::VideoTrackSource>(source, false, false);
 
     return track_source;
   }
@@ -496,7 +496,7 @@ void Conductor::AddTracks() {
 
   // rtc::scoped_refptr<webrtc::VideoTrackSourceInterface> video_device =
   //   CapturerTrackSource::CreateWithSource(
-  //     new yealink::YealinkVideoSourceAdapter(
+  //     new yealink::VideoSourceAdapter(
   //       CapturerTrackSource::Create()
   //     )
   //   );

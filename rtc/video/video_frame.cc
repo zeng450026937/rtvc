@@ -1,38 +1,38 @@
 
-#include "yealink/rtc/video/yealink_video_frame.h"
+#include "yealink/rtc/video/video_frame.h"
 
 #include "api/video/i420_buffer.h"
 
 namespace yealink {
 
-YealinkVideoFrame::YealinkVideoFrame(
+VideoFrame::VideoFrame(
     const rtc::scoped_refptr<webrtc::VideoFrameBuffer>& buffer)
     : video_frame_buffer_(buffer->ToI420()) {}
 
-YealinkVideoFrame::~YealinkVideoFrame() = default;
+VideoFrame::~VideoFrame() = default;
 
-YealinkVideoFrame::YealinkVideoFrame(const YealinkVideoFrame&) = default;
-YealinkVideoFrame::YealinkVideoFrame(YealinkVideoFrame&&) = default;
-YealinkVideoFrame& YealinkVideoFrame::operator=(const YealinkVideoFrame&) = default;
-YealinkVideoFrame& YealinkVideoFrame::operator=(YealinkVideoFrame&&) = default;
+VideoFrame::VideoFrame(const VideoFrame&) = default;
+VideoFrame::VideoFrame(VideoFrame&&) = default;
+VideoFrame& VideoFrame::operator=(const VideoFrame&) = default;
+VideoFrame& VideoFrame::operator=(VideoFrame&&) = default;
 
-multimedia::VideoRawDataType YealinkVideoFrame::RawDataType() const {
+multimedia::VideoRawDataType VideoFrame::RawDataType() const {
   return multimedia::VIDEO_RAW_DATA_I420;
 }
 
-int YealinkVideoFrame::Width() const {
+int VideoFrame::Width() const {
   return video_frame_buffer_->width();
 }
 
-int YealinkVideoFrame::Height() const {
+int VideoFrame::Height() const {
   return video_frame_buffer_->height();
 }
 
-int YealinkVideoFrame::PlaneNumber() const {
+int VideoFrame::PlaneNumber() const {
   return 3;
 }
 
-const multimedia::Byte* YealinkVideoFrame::PlaneBuffer(
+const multimedia::Byte* VideoFrame::PlaneBuffer(
     multimedia::VideoDeliveryFrame::PlaneType type) const {
   rtc::scoped_refptr<webrtc::I420BufferInterface> buffer =
       video_frame_buffer_->GetI420();
@@ -49,11 +49,11 @@ const multimedia::Byte* YealinkVideoFrame::PlaneBuffer(
   }
 }
 
-int YealinkVideoFrame::PlaneSize(multimedia::VideoDeliveryFrame::PlaneType type) const {
+int VideoFrame::PlaneSize(multimedia::VideoDeliveryFrame::PlaneType type) const {
   return PlaneStride(type);
 }
 
-int YealinkVideoFrame::PlaneStride(multimedia::VideoDeliveryFrame::PlaneType type) const {
+int VideoFrame::PlaneStride(multimedia::VideoDeliveryFrame::PlaneType type) const {
   rtc::scoped_refptr<webrtc::I420BufferInterface> buffer =
       video_frame_buffer_->GetI420();
 
@@ -69,11 +69,11 @@ int YealinkVideoFrame::PlaneStride(multimedia::VideoDeliveryFrame::PlaneType typ
   }
 }
 
-YealinkVideoFrame ToYealinkVideoFrame(const webrtc::VideoFrame& frame) {
-  return YealinkVideoFrame(frame.video_frame_buffer());
+VideoFrame WrapVideoFrame(const webrtc::VideoFrame& frame) {
+  return VideoFrame(frame.video_frame_buffer());
 }
 
-webrtc::VideoFrame FromYealinkVideoFrame(const multimedia::VideoDeliveryFrame& frame) {
+webrtc::VideoFrame WrapVideoFrame(const multimedia::VideoDeliveryFrame& frame) {
   rtc::scoped_refptr<webrtc::I420Buffer> buffer(webrtc::I420Buffer::Copy(
       frame.Width(), frame.Height(),
       frame.PlaneBuffer(multimedia::VideoDeliveryFrame::PlaneValueType::kYPlane),

@@ -1,0 +1,106 @@
+From 603d040ee4b7e96cc24cc922b86406cb0dc109d0 Mon Sep 17 00:00:00 2001
+From: zengsj <zengshuangjie@gmail.com>
+Date: Fri, 14 Jun 2019 14:15:29 +0800
+Subject: [PATCH 2/2] sdp addon
+
+---
+ BUILD.gn                 |  1 +
+ pc/session_description.h |  8 ++++++++
+ pc/webrtc_sdp.cc         | 15 +++++++++++++++
+ 3 files changed, 24 insertions(+)
+
+diff --git a/BUILD.gn b/BUILD.gn
+index 99f380a258..81396ff489 100644
+--- a/BUILD.gn
++++ b/BUILD.gn
+@@ -409,6 +409,7 @@ if (!build_with_chromium) {
+       "rtc_base",
+       "sdk",
+       "video",
++      "yealink/add_on",
+     ]
+ 
+     if (rtc_include_builtin_audio_codecs) {
+diff --git a/pc/session_description.h b/pc/session_description.h
+index 4156683030..f2bec4dfca 100644
+--- a/pc/session_description.h
++++ b/pc/session_description.h
+@@ -17,6 +17,7 @@
+ #include <string>
+ #include <vector>
+ 
++#include "absl/types/optional.h"
+ #include "api/crypto_params.h"
+ #include "api/media_types.h"
+ #include "api/rtp_parameters.h"
+@@ -28,6 +29,8 @@
+ #include "pc/simulcast_description.h"
+ #include "rtc_base/socket_address.h"
+ 
++#include "yealink/add_on/content_patterns.h"
++
+ namespace cricket {
+ 
+ typedef std::vector<AudioCodec> AudioCodecs;
+@@ -217,6 +220,9 @@ class MediaContentDescription {
+       const SimulcastDescription& simulcast) {
+     simulcast_ = simulcast;
+   }
++    
++  absl::optional<ContentPattern> pattern() const { return pattern_; }
++  void set_pattern(absl::optional<ContentPattern> pattern = absl::nullopt) { pattern_ = pattern; }
+ 
+  protected:
+   bool rtcp_mux_ = false;
+@@ -237,6 +243,8 @@ class MediaContentDescription {
+   ExtmapAllowMixed extmap_allow_mixed_enum_ = kNo;
+ 
+   SimulcastDescription simulcast_;
++
++  absl::optional<ContentPattern> pattern_;
+ };
+ 
+ // TODO(bugs.webrtc.org/8620): Remove this alias once downstream projects have
+diff --git a/pc/webrtc_sdp.cc b/pc/webrtc_sdp.cc
+index 006e4a1c38..7bda25c9e7 100644
+--- a/pc/webrtc_sdp.cc
++++ b/pc/webrtc_sdp.cc
+@@ -180,6 +180,9 @@ static const char kAttributeRid[] = "rid";
+ static const char kAttributeXGoogleFlag[] = "x-google-flag";
+ static const char kValueConference[] = "conference";
+ 
++// Yealink add-on flags
++static const char kAttributeContent[] = "content";
++
+ // Candidate
+ static const char kCandidateHost[] = "host";
+ static const char kCandidateSrflx[] = "srflx";
+@@ -1510,6 +1513,12 @@ void BuildMediaDescription(const ContentInfo* content_info,
+   } else if (IsRtp(media_desc->protocol())) {
+     BuildRtpContentAttributes(media_desc, media_type, msid_signaling, message);
+   }
++
++  if (media_desc->pattern()) {
++    InitAttrLine(kAttributeContent, &os);
++    os << kSdpDelimiterColon << cricket::ContentPatternToString(media_desc->pattern().value());
++    AddLine(os.str(), message);
++  }
+ }
+ 
+ void BuildSctpContentAttributes(std::string* message,
+@@ -3168,6 +3177,12 @@ bool ParseContent(const std::string& message,
+         }
+         if (flag_value.compare(kValueConference) == 0)
+           media_desc->set_conference_mode(true);
++      } else if (HasAttribute(line, kAttributeContent)) {
++        std::string attr_value;
++        if (!GetValue(line, kAttributeContent, &attr_value, error)) {
++          return false;
++        }
++        media_desc->set_pattern(cricket::ContentPatternFromString(attr_value));
+       } else if (HasAttribute(line, kAttributeMsid)) {
+         if (!ParseMsidAttribute(line, &stream_ids, &track_id, error)) {
+           return false;
+-- 
+2.15.1.windows.2
+
