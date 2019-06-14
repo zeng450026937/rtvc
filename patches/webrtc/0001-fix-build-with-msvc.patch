@@ -1,7 +1,7 @@
-From 9e94919fd36092badeeac6ef05417726485a50fe Mon Sep 17 00:00:00 2001
+From 07239b7d1a3800ab632672db07b6340f5ba3415e Mon Sep 17 00:00:00 2001
 From: zengsj <zengshuangjie@gmail.com>
 Date: Tue, 11 Jun 2019 16:18:36 +0800
-Subject: [PATCH] fix build with msvc
+Subject: [PATCH 1/2] fix build with msvc
 
 ---
  BUILD.gn                           |  6 ++++++
