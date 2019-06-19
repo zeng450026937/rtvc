@@ -10,13 +10,37 @@ namespace yealink {
 
 VideoSourceAdapter::VideoSourceAdapter(
     rtc::scoped_refptr<webrtc::VideoTrackSourceInterface> video_source)
-    : video_source_(video_source) {
-  RTC_DCHECK(video_source_);
-  video_source_->AddOrUpdateSink(this, rtc::VideoSinkWants());
+    : video_source_(video_source), source_(nullptr) {
+  if (video_source_) {
+    video_source_->AddOrUpdateSink(this, rtc::VideoSinkWants());
+  }
+}
+
+VideoSourceAdapter::VideoSourceAdapter(
+    rtc::VideoSourceInterface<webrtc::VideoFrame>* video_source)
+    : video_source_(nullptr), source_(video_source) {
+  if (source_) {
+    source_->AddOrUpdateSink(this, rtc::VideoSinkWants());
+  }
 }
 VideoSourceAdapter::~VideoSourceAdapter() {
-  RTC_DCHECK(video_source_);
-  video_source_->RemoveSink(this);
+  if (video_source_) {
+    video_source_->RemoveSink(this);
+  }
+  if (source_) {
+    source_->RemoveSink(this);
+  }
+}
+
+void VideoSourceAdapter::SetVideoSource(
+    rtc::VideoSourceInterface<webrtc::VideoFrame>* video_source) {
+  if (source_) {
+    source_->RemoveSink(this);
+  }
+  if (video_source) {
+    source_ = video_source;
+    source_->AddOrUpdateSink(this, rtc::VideoSinkWants());
+  }
 }
 
 int VideoSourceAdapter::ConnectToDeliverySink(
@@ -26,8 +50,8 @@ int VideoSourceAdapter::ConnectToDeliverySink(
   SinkPair* sink_pair = FindSinkPair(sink);
 
   rtc::VideoSinkWants wants;
-  VideoSink* sink_wrapper = WrapVideoSink(
-      const_cast<multimedia::VideoFrameDeliverySink*>(sink));
+  VideoSink* sink_wrapper =
+      WrapVideoSink(const_cast<multimedia::VideoFrameDeliverySink*>(sink));
 
   if (!sink_pair) {
     sinks_.push_back(SinkPair(sink_wrapper, wants));

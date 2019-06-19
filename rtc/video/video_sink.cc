@@ -36,7 +36,8 @@ void VideoSink::OnFrame(const webrtc::VideoFrame& frame) {
     rtc_sink_->OnFrame(frame);
   }
   if (vie_sink_) {
-    vie_sink_->OnFrameIncoming(WrapVideoFrame(frame));
+    auto f = WrapVideoFrame(frame);
+    vie_sink_->OnFrameIncoming(f);
   }
 }
 

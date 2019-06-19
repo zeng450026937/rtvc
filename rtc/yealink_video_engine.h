@@ -26,6 +26,9 @@
 #include "rtc_base/thread_annotations.h"
 #include "rtc_base/thread_checker.h"
 
+#include "yealink/rtc/video/avc_session.h"
+#include "yealink/rtc/transport_delegate.h"
+
 namespace webrtc {
 class VideoDecoderFactory;
 class VideoEncoderFactory;
@@ -55,7 +58,8 @@ class UnsignalledSsrcHandlerInternal {
 class YealinkUnsignalledSsrcHandler : public UnsignalledSsrcHandlerInternal {
  public:
   YealinkUnsignalledSsrcHandler();
-  Action OnUnsignalledSsrc(YealinkVideoChannel* channel, uint32_t ssrc) override;
+  Action OnUnsignalledSsrc(YealinkVideoChannel* channel,
+                           uint32_t ssrc) override;
 
   rtc::VideoSinkInterface<webrtc::VideoFrame>* GetDefaultSink() const;
   void SetDefaultSink(YealinkVideoChannel* channel,
@@ -94,6 +98,7 @@ class YealinkVideoEngine : public VideoEngineInterface {
   const std::unique_ptr<webrtc::VideoEncoderFactory> encoder_factory_;
   const std::unique_ptr<webrtc::VideoBitrateAllocatorFactory>
       bitrate_allocator_factory_;
+  const std::unique_ptr<yealink::AVCSessionFactory> avc_session_factory_;
 };
 
 class YealinkVideoChannel : public VideoMediaChannel, public webrtc::Transport {
@@ -105,7 +110,8 @@ class YealinkVideoChannel : public VideoMediaChannel, public webrtc::Transport {
       const webrtc::CryptoOptions& crypto_options,
       webrtc::VideoEncoderFactory* encoder_factory,
       webrtc::VideoDecoderFactory* decoder_factory,
-      webrtc::VideoBitrateAllocatorFactory* bitrate_allocator_factory);
+      webrtc::VideoBitrateAllocatorFactory* bitrate_allocator_factory,
+      yealink::AVCSessionFactory* avc_session_factory);
   ~YealinkVideoChannel() override;
 
   // VideoMediaChannel implementation
@@ -271,7 +277,8 @@ class YealinkVideoChannel : public VideoMediaChannel, public webrtc::Transport {
         int max_bitrate_bps,
         const absl::optional<VideoCodecSettings>& codec_settings,
         const absl::optional<std::vector<webrtc::RtpExtension>>& rtp_extensions,
-        const VideoSendParameters& send_params);
+        const VideoSendParameters& send_params,
+        rtc::scoped_refptr<yealink::AVCSession> session);
     virtual ~WebRtcVideoSendStream();
 
     void SetSendParameters(const ChangedSendParameters& send_params);
@@ -360,6 +367,8 @@ class YealinkVideoChannel : public VideoMediaChannel, public webrtc::Transport {
     webrtc::RtpParameters rtp_parameters_ RTC_GUARDED_BY(&thread_checker_);
 
     bool sending_ RTC_GUARDED_BY(&thread_checker_);
+
+    rtc::scoped_refptr<yealink::AVCSession> session_;
   };
 
   // Wrapper for the receiver part, contains configs etc. that are needed to
@@ -374,14 +383,16 @@ class YealinkVideoChannel : public VideoMediaChannel, public webrtc::Transport {
         webrtc::VideoDecoderFactory* decoder_factory,
         bool default_stream,
         const std::vector<VideoCodecSettings>& recv_codecs,
-        const webrtc::FlexfecReceiveStream::Config& flexfec_config);
+        const webrtc::FlexfecReceiveStream::Config& flexfec_config,
+        rtc::scoped_refptr<yealink::AVCSession> session);
     ~WebRtcVideoReceiveStream();
 
     const std::vector<uint32_t>& GetSsrcs() const;
 
     std::vector<webrtc::RtpSource> GetSources();
 
-    // Does not return codecs, they are filled by the owning YealinkVideoChannel.
+    // Does not return codecs, they are filled by the owning
+    // YealinkVideoChannel.
     webrtc::RtpParameters GetRtpParameters() const;
 
     void SetLocalSsrc(uint32_t local_ssrc);
@@ -443,6 +454,8 @@ class YealinkVideoChannel : public VideoMediaChannel, public webrtc::Transport {
     // Start NTP time is estimated as current remote NTP time (estimated from
     // RTCP) minus the elapsed time, as soon as remote NTP time is available.
     int64_t estimated_remote_start_ntp_time_ms_ RTC_GUARDED_BY(sink_lock_);
+
+    rtc::scoped_refptr<yealink::AVCSession> session_;
   };
 
   void Construct(webrtc::Call* call, YealinkVideoEngine* engine);
@@ -533,6 +546,11 @@ class YealinkVideoChannel : public VideoMediaChannel, public webrtc::Transport {
   // Per peer connection crypto options that last for the lifetime of the peer
   // connection.
   const webrtc::CryptoOptions crypto_options_ RTC_GUARDED_BY(thread_checker_);
+
+  yealink::AVCSessionFactory* const avc_session_facotry_;
+  // yealink video engine session, responsible for encode/decode
+  // and send/recv video stream.
+  rtc::scoped_refptr<yealink::AVCSession> avc_session_;
 };
 
 }  // namespace cricket

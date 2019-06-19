@@ -15,17 +15,22 @@
 
 namespace yealink {
 
-class VideoSourceAdapter
-    : public multimedia::VideoFrameProvider,
-      public rtc::VideoSinkInterface<webrtc::VideoFrame> {
+class VideoSourceAdapter : public multimedia::VideoFrameProvider,
+                           public rtc::VideoSinkInterface<webrtc::VideoFrame> {
  public:
   VideoSourceAdapter(
-      rtc::scoped_refptr<webrtc::VideoTrackSourceInterface> video_source);
+      rtc::scoped_refptr<webrtc::VideoTrackSourceInterface>
+          video_source);
+  VideoSourceAdapter(
+      rtc::VideoSourceInterface<webrtc::VideoFrame>* video_source);
   ~VideoSourceAdapter() override;
+
+  void SetVideoSource(rtc::VideoSourceInterface<webrtc::VideoFrame>* video_source);
 
   int ConnectToDeliverySink(multimedia::VideoFrameDeliverySink* sink) override;
 
-  int DisconnectToDeliverySink(multimedia::VideoFrameDeliverySink* sink) override;
+  int DisconnectToDeliverySink(
+      multimedia::VideoFrameDeliverySink* sink) override;
 
  protected:
   void OnFrame(const webrtc::VideoFrame& frame) override;
@@ -39,7 +44,9 @@ class VideoSourceAdapter
   SinkPair* FindSinkPair(const multimedia::VideoFrameDeliverySink* sink);
 
   std::vector<SinkPair> sinks_;
-  rtc::scoped_refptr<webrtc::VideoTrackSourceInterface> video_source_;
+  rtc::scoped_refptr<webrtc::VideoTrackSourceInterface>
+      video_source_;
+  rtc::VideoSourceInterface<webrtc::VideoFrame>* source_;
 
   rtc::VideoBroadcaster broadcaster_;
 };

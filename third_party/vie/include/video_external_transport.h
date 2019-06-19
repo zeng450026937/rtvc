@@ -1,6 +1,7 @@
 #ifndef __VIDEO_EXTERNAL_TRANSPORT_H__
 #define __VIDEO_EXTERNAL_TRANSPORT_H__
 
+#include "multimedia_types.h"
 namespace multimedia
 {
 	typedef int VideoTransportHandle;
@@ -27,7 +28,7 @@ namespace multimedia
 		int buf_lens[kVideoTransportBufferVectorSize];
 	};
 
-	class VideoExternalTransportSink
+	class _MULTIMEDIA_API_EXPORT_ VideoExternalTransportSink
 	{
 	public:
 		static int StartUpExternalTransport(VideoExternalTransportSink *trpt_cb);

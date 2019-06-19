@@ -1085,7 +1085,7 @@ typedef struct
     /*audio capacity*/
     unsigned int    audio_codec;             /*support audio codec*/
 #define  IPVP_CAP_ACODEC_CNG        (1<<0)      /*Comfort Noise in rfc3389*/
-#define  IPVP_CAP_ACODEC_PCMU       (1<<1)      /*ITU-T G.711 PCM ¦Ì-Law */
+#define  IPVP_CAP_ACODEC_PCMU       (1<<1)      /*ITU-T G.711 PCM Â¦ÃŒ-Law */
 #define  IPVP_CAP_ACODEC_PCMA       (1<<2)      /*ITU-T G.711 PCM A-Law */
 #define  IPVP_CAP_ACODEC_G722       (1<<3)      /*ITU-T G.722 Audio*/
 #define  IPVP_CAP_ACODEC_G729       (1<<4)      /*ITU-T G.729 and G.729a*/
@@ -1102,7 +1102,7 @@ typedef struct
 #define  IPVP_CAP_ACODEC_AMR_WB     (1<<15)     /*ITU-T G.722.2, Adaptive Multi-Rate Wideband audio in rfc4867*/
 #define  IPVP_CAP_ACODEC_SPEEX      (1<<16)     /*the Speex Codec in rfc5574*/
 #define  IPVP_CAP_ACODEC_OPUS       (1<<17)     /*Opus Speech Audio Codec*/
-#define  IPVP_CAP_ACODEC_PCMU_WB    (1<<18)     /*ITU-T G.711.1 PCM ¦Ì-Law in rfc5391*/
+#define  IPVP_CAP_ACODEC_PCMU_WB    (1<<18)     /*ITU-T G.711.1 PCM Â¦ÃŒ-Law in rfc5391*/
 #define  IPVP_CAP_ACODEC_PCMA_WB    (1<<19)     /*ITU-T G.711.1 PCM A-Law in rfc5391*/
 
     unsigned int    audio_mode;             /*support mode of audio*/
@@ -1697,7 +1697,7 @@ typedef struct
         float           FECRecvDistance6;               /*Percentage of session where packets with FEC distance of 6 was received*/
         float           FECRecvDistance7;               /*Percentage of session where packets with FEC distance of 7 was received*/
         float           FECRecvDistance8OrHigher;       /*Percentage of session where packets with FEC distance of 8 or larger was received*/
-        float           FECRecvScheme;                  /*FEC scheme,0 ¨C codec level FEC (in-band),1 ¨Cexternal FEC (RFC 2198)*/                
+        float           FECRecvScheme;                  /*FEC scheme,0 Â¨C codec level FEC (in-band),1 Â¨Cexternal FEC (RFC 2198)*/                
         float           FECRecvRedundancy;              /*Average FEC redundancy for packets received*/
         unsigned int    HealerPushCount;                /*Number of packets pushed into the audio healer/jitter buffer from network*/
         unsigned int    HealerPullCount;                /*Number of packets pulled from the audio healer/jitter buffer to be rendered or mixed*/

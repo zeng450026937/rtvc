@@ -25,6 +25,9 @@
 #include "rtc_base/trace_event.h"
 #include "system_wrappers/include/field_trial.h"
 
+#include "yealink/rtc/video/avc_session.h"
+#include "yealink/rtc/video_engine_delegate.h"
+
 namespace cricket {
 
 namespace {
@@ -324,9 +327,9 @@ YealinkVideoChannel::WebRtcVideoSendStream::ConfigureVideoEncoderSettings(
 YealinkUnsignalledSsrcHandler::YealinkUnsignalledSsrcHandler()
     : default_sink_(nullptr) {}
 
-UnsignalledSsrcHandlerInternal::Action YealinkUnsignalledSsrcHandler::OnUnsignalledSsrc(
-    YealinkVideoChannel* channel,
-    uint32_t ssrc) {
+UnsignalledSsrcHandlerInternal::Action
+YealinkUnsignalledSsrcHandler::OnUnsignalledSsrc(YealinkVideoChannel* channel,
+                                                 uint32_t ssrc) {
   absl::optional<uint32_t> default_recv_ssrc =
       channel->GetDefaultReceiveStreamSsrc();
 
@@ -379,7 +382,8 @@ YealinkVideoEngine::YealinkVideoEngine(
         video_bitrate_allocator_factory)
     : decoder_factory_(std::move(video_decoder_factory)),
       encoder_factory_(std::move(video_encoder_factory)),
-      bitrate_allocator_factory_(std::move(video_bitrate_allocator_factory)) {
+      bitrate_allocator_factory_(std::move(video_bitrate_allocator_factory)),
+      avc_session_factory_(new yealink::AVCSessionFactory()) {
   RTC_LOG(LS_INFO) << "YealinkVideoEngine::YealinkVideoEngine()";
 }
 
@@ -394,8 +398,9 @@ VideoMediaChannel* YealinkVideoEngine::CreateMediaChannel(
     const webrtc::CryptoOptions& crypto_options) {
   RTC_LOG(LS_INFO) << "CreateMediaChannel. Options: " << options.ToString();
   return new YealinkVideoChannel(call, config, options, crypto_options,
-                                encoder_factory_.get(), decoder_factory_.get(),
-                                bitrate_allocator_factory_.get());
+                                 encoder_factory_.get(), decoder_factory_.get(),
+                                 bitrate_allocator_factory_.get(),
+                                 avc_session_factory_.get());
 }
 std::vector<VideoCodec> YealinkVideoEngine::codecs() const {
   return AssignPayloadTypesAndDefaultCodecs(encoder_factory_.get());
@@ -439,7 +444,8 @@ YealinkVideoChannel::YealinkVideoChannel(
     const webrtc::CryptoOptions& crypto_options,
     webrtc::VideoEncoderFactory* encoder_factory,
     webrtc::VideoDecoderFactory* decoder_factory,
-    webrtc::VideoBitrateAllocatorFactory* bitrate_allocator_factory)
+    webrtc::VideoBitrateAllocatorFactory* bitrate_allocator_factory,
+    yealink::AVCSessionFactory* avc_session_factory)
     : VideoMediaChannel(config),
       call_(call),
       unsignalled_ssrc_handler_(&default_unsignalled_ssrc_handler_),
@@ -447,6 +453,7 @@ YealinkVideoChannel::YealinkVideoChannel(
       encoder_factory_(encoder_factory),
       decoder_factory_(decoder_factory),
       bitrate_allocator_factory_(bitrate_allocator_factory),
+      avc_session_facotry_(avc_session_factory),
       preferred_dscp_(rtc::DSCP_DEFAULT),
       default_send_options_(options),
       last_stats_log_ms_(-1),
@@ -460,6 +467,8 @@ YealinkVideoChannel::YealinkVideoChannel(
   recv_codecs_ =
       MapCodecs(AssignPayloadTypesAndDefaultCodecs(encoder_factory_));
   recv_flexfec_payload_type_ = recv_codecs_.front().flexfec_payload_type;
+
+  avc_session_ = avc_session_factory->CreateAVCSession(this);
 }
 
 YealinkVideoChannel::~YealinkVideoChannel() {
@@ -645,23 +654,23 @@ bool YealinkVideoChannel::SetSendParameters(const VideoSendParameters& params) {
         bitrate_config_);
   }
 
-    for (auto& kv : send_streams_) {
-      kv.second->SetSendParameters(changed_params);
+  for (auto& kv : send_streams_) {
+    kv.second->SetSendParameters(changed_params);
+  }
+  if (changed_params.codec || changed_params.rtcp_mode) {
+    // Update receive feedback parameters from new codec or RTCP mode.
+    RTC_LOG(LS_INFO)
+        << "SetFeedbackOptions on all the receive streams because the send "
+           "codec or RTCP mode has changed.";
+    for (auto& kv : receive_streams_) {
+      RTC_DCHECK(kv.second != nullptr);
+      kv.second->SetFeedbackParameters(
+          HasNack(send_codec_->codec), HasRemb(send_codec_->codec),
+          HasTransportCc(send_codec_->codec),
+          params.rtcp.reduced_size ? webrtc::RtcpMode::kReducedSize
+                                   : webrtc::RtcpMode::kCompound);
     }
-    if (changed_params.codec || changed_params.rtcp_mode) {
-      // Update receive feedback parameters from new codec or RTCP mode.
-      RTC_LOG(LS_INFO)
-          << "SetFeedbackOptions on all the receive streams because the send "
-             "codec or RTCP mode has changed.";
-      for (auto& kv : receive_streams_) {
-        RTC_DCHECK(kv.second != nullptr);
-        kv.second->SetFeedbackParameters(
-            HasNack(send_codec_->codec), HasRemb(send_codec_->codec),
-            HasTransportCc(send_codec_->codec),
-            params.rtcp.reduced_size ? webrtc::RtcpMode::kReducedSize
-                                     : webrtc::RtcpMode::kCompound);
-      }
-    }
+  }
   send_params_ = params;
   return true;
 }
@@ -912,9 +921,9 @@ bool YealinkVideoChannel::SetSend(bool send) {
     RTC_DLOG(LS_ERROR) << "SetSend(true) called before setting codec.";
     return false;
   }
-    for (const auto& kv : send_streams_) {
-      kv.second->SetSend(send);
-    }
+  for (const auto& kv : send_streams_) {
+    kv.second->SetSend(send);
+  }
   sending_ = send;
   return true;
 }
@@ -998,7 +1007,7 @@ bool YealinkVideoChannel::AddSendStream(const StreamParams& sp) {
   WebRtcVideoSendStream* stream = new WebRtcVideoSendStream(
       call_, sp, std::move(config), default_send_options_,
       video_config_.enable_cpu_adaptation, bitrate_config_.max_bitrate_bps,
-      send_codec_, send_rtp_extensions_, send_params_);
+      send_codec_, send_rtp_extensions_, send_params_, avc_session_);
 
   uint32_t ssrc = sp.first_ssrc();
   RTC_DCHECK(ssrc != 0);
@@ -1024,30 +1033,30 @@ bool YealinkVideoChannel::RemoveSendStream(uint32_t ssrc) {
   RTC_LOG(LS_INFO) << "RemoveSendStream: " << ssrc;
 
   WebRtcVideoSendStream* removed_stream;
-    std::map<uint32_t, WebRtcVideoSendStream*>::iterator it =
-        send_streams_.find(ssrc);
-    if (it == send_streams_.end()) {
-      return false;
+  std::map<uint32_t, WebRtcVideoSendStream*>::iterator it =
+      send_streams_.find(ssrc);
+  if (it == send_streams_.end()) {
+    return false;
+  }
+
+  for (uint32_t old_ssrc : it->second->GetSsrcs())
+    send_ssrcs_.erase(old_ssrc);
+
+  removed_stream = it->second;
+  send_streams_.erase(it);
+
+  // Switch receiver report SSRCs, the one in use is no longer valid.
+  if (rtcp_receiver_report_ssrc_ == ssrc) {
+    rtcp_receiver_report_ssrc_ = send_streams_.empty()
+                                     ? kDefaultRtcpReceiverReportSsrc
+                                     : send_streams_.begin()->first;
+    RTC_LOG(LS_INFO) << "SetLocalSsrc on all the receive streams because the "
+                        "previous local SSRC was removed.";
+
+    for (auto& kv : receive_streams_) {
+      kv.second->SetLocalSsrc(rtcp_receiver_report_ssrc_);
     }
-
-    for (uint32_t old_ssrc : it->second->GetSsrcs())
-      send_ssrcs_.erase(old_ssrc);
-
-    removed_stream = it->second;
-    send_streams_.erase(it);
-
-    // Switch receiver report SSRCs, the one in use is no longer valid.
-    if (rtcp_receiver_report_ssrc_ == ssrc) {
-      rtcp_receiver_report_ssrc_ = send_streams_.empty()
-                                       ? kDefaultRtcpReceiverReportSsrc
-                                       : send_streams_.begin()->first;
-      RTC_LOG(LS_INFO) << "SetLocalSsrc on all the receive streams because the "
-                          "previous local SSRC was removed.";
-
-      for (auto& kv : receive_streams_) {
-        kv.second->SetLocalSsrc(rtcp_receiver_report_ssrc_);
-      }
-    }
+  }
 
   delete removed_stream;
 
@@ -1066,7 +1075,7 @@ bool YealinkVideoChannel::AddRecvStream(const StreamParams& sp) {
 }
 
 bool YealinkVideoChannel::AddRecvStream(const StreamParams& sp,
-                                       bool default_stream) {
+                                        bool default_stream) {
   RTC_DCHECK_RUN_ON(&thread_checker_);
 
   RTC_LOG(LS_INFO) << "AddRecvStream"
@@ -1116,7 +1125,7 @@ bool YealinkVideoChannel::AddRecvStream(const StreamParams& sp,
 
   receive_streams_[ssrc] = new WebRtcVideoReceiveStream(
       call_, sp, std::move(config), decoder_factory_, default_stream,
-      recv_codecs_, flexfec_config);
+      recv_codecs_, flexfec_config, avc_session_);
 
   return true;
 }
@@ -1250,7 +1259,7 @@ bool YealinkVideoChannel::GetStats(VideoMediaInfo* info) {
 }
 
 void YealinkVideoChannel::FillSenderStats(VideoMediaInfo* video_media_info,
-                                         bool log_stats) {
+                                          bool log_stats) {
   for (std::map<uint32_t, WebRtcVideoSendStream*>::iterator it =
            send_streams_.begin();
        it != send_streams_.end(); ++it) {
@@ -1260,7 +1269,7 @@ void YealinkVideoChannel::FillSenderStats(VideoMediaInfo* video_media_info,
 }
 
 void YealinkVideoChannel::FillReceiverStats(VideoMediaInfo* video_media_info,
-                                           bool log_stats) {
+                                            bool log_stats) {
   for (std::map<uint32_t, WebRtcVideoReceiveStream*>::iterator it =
            receive_streams_.begin();
        it != receive_streams_.end(); ++it) {
@@ -1293,8 +1302,10 @@ void YealinkVideoChannel::FillSendAndReceiveCodecStats(
 }
 
 void YealinkVideoChannel::OnPacketReceived(rtc::CopyOnWriteBuffer* packet,
-                                          int64_t packet_time_us) {
+                                           int64_t packet_time_us) {
   RTC_DCHECK_RUN_ON(&thread_checker_);
+  avc_session_->DeliverPacket(packet, false);
+  return;
   const webrtc::PacketReceiver::DeliveryStatus delivery_result =
       call_->Receiver()->DeliverPacket(webrtc::MediaType::VIDEO, *packet,
                                        packet_time_us);
@@ -1353,8 +1364,10 @@ void YealinkVideoChannel::OnPacketReceived(rtc::CopyOnWriteBuffer* packet,
 }
 
 void YealinkVideoChannel::OnRtcpReceived(rtc::CopyOnWriteBuffer* packet,
-                                        int64_t packet_time_us) {
+                                         int64_t packet_time_us) {
   RTC_DCHECK_RUN_ON(&thread_checker_);
+  avc_session_->DeliverPacket(packet, true);
+  return;
   // TODO(pbos): Check webrtc::PacketReceiver::DELIVERY_OK once we deliver
   // for both audio and video on the same path. Since BundleFilter doesn't
   // filter RTCP anymore incoming RTCP packets could've been going to audio (so
@@ -1422,7 +1435,7 @@ void YealinkVideoChannel::SetFrameEncryptor(
 }
 
 bool YealinkVideoChannel::SetBaseMinimumPlayoutDelayMs(uint32_t ssrc,
-                                                      int delay_ms) {
+                                                       int delay_ms) {
   RTC_DCHECK_RUN_ON(&thread_checker_);
   absl::optional<uint32_t> default_ssrc = GetDefaultReceiveStreamSsrc();
 
@@ -1493,8 +1506,8 @@ std::vector<webrtc::RtpSource> YealinkVideoChannel::GetSources(
 }
 
 bool YealinkVideoChannel::SendRtp(const uint8_t* data,
-                                 size_t len,
-                                 const webrtc::PacketOptions& options) {
+                                  size_t len,
+                                  const webrtc::PacketOptions& options) {
   rtc::CopyOnWriteBuffer packet(data, len, kMaxRtpPacketLen);
   rtc::PacketOptions rtc_options;
   rtc_options.packet_id = options.packet_id;
@@ -1541,7 +1554,8 @@ YealinkVideoChannel::WebRtcVideoSendStream::WebRtcVideoSendStream(
     const absl::optional<std::vector<webrtc::RtpExtension>>& rtp_extensions,
     // TODO(deadbeef): Don't duplicate information between send_params,
     // rtp_extensions, options, etc.
-    const VideoSendParameters& send_params)
+    const VideoSendParameters& send_params,
+    rtc::scoped_refptr<yealink::AVCSession> session)
     : worker_thread_(rtc::Thread::Current()),
       ssrcs_(sp.ssrcs),
       ssrc_groups_(sp.ssrc_groups),
@@ -1552,7 +1566,8 @@ YealinkVideoChannel::WebRtcVideoSendStream::WebRtcVideoSendStream(
       encoder_sink_(nullptr),
       parameters_(std::move(config), options, max_bitrate_bps, codec_settings),
       rtp_parameters_(CreateRtpParametersWithEncodings(sp)),
-      sending_(false) {
+      sending_(false),
+      session_(session) {
   parameters_.config.rtp.max_packet_size = kVideoMtu;
   parameters_.conference_mode = send_params.conference_mode;
 
@@ -1603,6 +1618,8 @@ YealinkVideoChannel::WebRtcVideoSendStream::WebRtcVideoSendStream(
   parameters_.config.rtp.mid = send_params.mid;
   rtp_parameters_.rtcp.reduced_size = send_params.rtcp.reduced_size;
 
+  session_->SetSendCodecs(send_params.codecs);
+
   if (codec_settings) {
     SetCodec(*codec_settings);
   }
@@ -1612,6 +1629,7 @@ YealinkVideoChannel::WebRtcVideoSendStream::~WebRtcVideoSendStream() {
   if (stream_ != NULL) {
     call_->DestroyVideoSendStream(stream_);
   }
+  session_->SetSend(false);
 }
 
 bool YealinkVideoChannel::WebRtcVideoSendStream::SetVideoSend(
@@ -1640,12 +1658,14 @@ bool YealinkVideoChannel::WebRtcVideoSendStream::SetVideoSend(
   }
 
   if (source_ && stream_) {
-    stream_->SetSource(nullptr, webrtc::DegradationPreference::DISABLED);
+    // stream_->SetSource(nullptr, webrtc::DegradationPreference::DISABLED);
+    session_->SetSource(nullptr, webrtc::DegradationPreference::DISABLED);
   }
   // Switch to the new source.
   source_ = source;
   if (source && stream_) {
-    stream_->SetSource(this, GetDegradationPreference());
+    // stream_->SetSource(this, GetDegradationPreference());
+    session_->SetSource(this, GetDegradationPreference());
   }
   return true;
 }
@@ -1825,7 +1845,8 @@ webrtc::RTCError YealinkVideoChannel::WebRtcVideoSendStream::SetRtpParameters(
     UpdateSendState();
   }
   if (new_degradation_preference) {
-    stream_->SetSource(this, GetDegradationPreference());
+    // stream_->SetSource(this, GetDegradationPreference());
+    session_->SetSource(this, GetDegradationPreference());
   }
   return webrtc::RTCError::OK();
 }
@@ -1861,6 +1882,7 @@ void YealinkVideoChannel::WebRtcVideoSendStream::UpdateSendState() {
       stream_->Stop();
     }
   }
+  session_->SetSend(sending_);
 }
 
 webrtc::VideoEncoderConfig
@@ -2161,8 +2183,11 @@ void YealinkVideoChannel::WebRtcVideoSendStream::RecreateWebRtcStream() {
 
   parameters_.encoder_config.encoder_specific_settings = NULL;
 
+  session_->SetSelectedSendCodec(parameters_.codec_settings->codec);
+  
   if (source_) {
-    stream_->SetSource(this, GetDegradationPreference());
+    // stream_->SetSource(this, GetDegradationPreference());
+    session_->SetSource(this, GetDegradationPreference());
   }
 
   // Call stream_->Start() if necessary conditions are met.
@@ -2176,7 +2201,8 @@ YealinkVideoChannel::WebRtcVideoReceiveStream::WebRtcVideoReceiveStream(
     webrtc::VideoDecoderFactory* decoder_factory,
     bool default_stream,
     const std::vector<VideoCodecSettings>& recv_codecs,
-    const webrtc::FlexfecReceiveStream::Config& flexfec_config)
+    const webrtc::FlexfecReceiveStream::Config& flexfec_config,
+    rtc::scoped_refptr<yealink::AVCSession> session)
     : call_(call),
       stream_params_(sp),
       stream_(NULL),
@@ -2187,12 +2213,15 @@ YealinkVideoChannel::WebRtcVideoReceiveStream::WebRtcVideoReceiveStream(
       decoder_factory_(decoder_factory),
       sink_(NULL),
       first_frame_timestamp_(-1),
-      estimated_remote_start_ntp_time_ms_(0) {
+      estimated_remote_start_ntp_time_ms_(0),
+      session_(session) {
   config_.renderer = this;
   ConfigureCodecs(recv_codecs);
   ConfigureFlexfecCodec(flexfec_config.payload_type);
   MaybeRecreateWebRtcFlexfecStream();
   RecreateWebRtcVideoStream();
+  session_->SetSink(this);
+  session_->SetReceive(true);
 }
 
 YealinkVideoChannel::WebRtcVideoReceiveStream::~WebRtcVideoReceiveStream() {
@@ -2201,6 +2230,7 @@ YealinkVideoChannel::WebRtcVideoReceiveStream::~WebRtcVideoReceiveStream() {
     call_->DestroyFlexfecReceiveStream(flexfec_stream_);
   }
   call_->DestroyVideoReceiveStream(stream_);
+  session_->SetReceive(false);
 }
 
 const std::vector<uint32_t>&
@@ -2235,9 +2265,12 @@ YealinkVideoChannel::WebRtcVideoReceiveStream::GetRtpParameters() const {
 void YealinkVideoChannel::WebRtcVideoReceiveStream::ConfigureCodecs(
     const std::vector<VideoCodecSettings>& recv_codecs) {
   RTC_DCHECK(!recv_codecs.empty());
+  std::vector<cricket::VideoCodec> codecs;
+
   config_.decoders.clear();
   config_.rtp.rtx_associated_payload_types.clear();
   for (const auto& recv_codec : recv_codecs) {
+    codecs.push_back(recv_codec.codec);
     webrtc::SdpVideoFormat video_format(recv_codec.codec.name,
                                         recv_codec.codec.params);
 
@@ -2263,6 +2296,8 @@ void YealinkVideoChannel::WebRtcVideoReceiveStream::ConfigureCodecs(
         .rtx_associated_payload_types[codec.ulpfec.red_rtx_payload_type] =
         codec.ulpfec.red_payload_type;
   }
+
+  session_->SetReceiveCodecs(codecs);
 }
 
 void YealinkVideoChannel::WebRtcVideoReceiveStream::ConfigureFlexfecCodec(
@@ -2355,7 +2390,8 @@ void YealinkVideoChannel::WebRtcVideoReceiveStream::SetRecvParameters(
   }
 }
 
-void YealinkVideoChannel::WebRtcVideoReceiveStream::RecreateWebRtcVideoStream() {
+void YealinkVideoChannel::WebRtcVideoReceiveStream::
+    RecreateWebRtcVideoStream() {
   absl::optional<int> base_minimum_playout_delay_ms;
   if (stream_) {
     base_minimum_playout_delay_ms = stream_->GetBaseMinimumPlayoutDelayMs();
@@ -2433,13 +2469,13 @@ void YealinkVideoChannel::WebRtcVideoReceiveStream::SetFrameDecryptor(
   }
 }
 
-bool YealinkVideoChannel::WebRtcVideoReceiveStream::SetBaseMinimumPlayoutDelayMs(
-    int delay_ms) {
+bool YealinkVideoChannel::WebRtcVideoReceiveStream::
+    SetBaseMinimumPlayoutDelayMs(int delay_ms) {
   return stream_ ? stream_->SetBaseMinimumPlayoutDelayMs(delay_ms) : false;
 }
 
-int YealinkVideoChannel::WebRtcVideoReceiveStream::GetBaseMinimumPlayoutDelayMs()
-    const {
+int YealinkVideoChannel::WebRtcVideoReceiveStream::
+    GetBaseMinimumPlayoutDelayMs() const {
   return stream_ ? stream_->GetBaseMinimumPlayoutDelayMs() : 0;
 }
 

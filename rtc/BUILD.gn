@@ -18,6 +18,10 @@ rtc_source_set("media_engine") {
     "yealink_video_engine.cc",
     "yealink_voice_engine.h",
     "yealink_voice_engine.cc",
+    "video_engine_delegate.h",
+    "video_engine_delegate.cc",
+    "transport_delegate.h",
+    "transport_delegate.cc",
   ]
   deps = [
     "//media:rtc_audio_video",
@@ -28,6 +32,8 @@ rtc_source_set("media_video") {
   testonly = true
   visibility = [ "*" ]
   sources = [
+    "video/avc_session.h",
+    "video/avc_session.cc",
     "video/video_frame.h",
     "video/video_frame.cc",
     "video/video_sink.h",
