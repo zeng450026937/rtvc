@@ -52,14 +52,14 @@ VideoEngineDelegate* VideoEngineDelegate::Instance() {
 }
 
 VideoEngineDelegate::VideoEngineDelegate() {
+  RTC_LOG(LS_INFO) << "VideoEngineDelegate()";
   multimedia::MultimediaLogApi::SetLogCallback(video_engine_log_hub);
   multimedia::VideoSessionGlobalApi::StartUp(video_engine_event_hub);
   multimedia::VideoExternalTransportSink::StartUpExternalTransport(this);
 }
 VideoEngineDelegate::~VideoEngineDelegate() {
+  RTC_LOG(LS_INFO) << "~VideoEngineDelegate()";
   multimedia::VideoSessionGlobalApi::ShutDown();
-  // By above RTC_DEFINE_STATIC_LOCAL.
-  RTC_NOTREACHED() << "VideoEngineDelegate should never be destructed.";
 }
 
 void VideoEngineDelegate::RegisterTransport(TransportDelegate* transport) {

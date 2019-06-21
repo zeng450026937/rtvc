@@ -7,6 +7,11 @@
 
 namespace yealink {
 
+class AudioEngineConfig {
+ public:
+  static void Setup();
+};
+
 class AudioEngineDelegate {
  public:
   static AudioEngineDelegate* Instance();
@@ -20,6 +25,11 @@ class AudioEngineDelegate {
  private:
   AudioEngineDelegate::AudioEngineDelegate();
   AudioEngineDelegate::~AudioEngineDelegate();
+
+  int InitDev();
+  int InitLib();
+  int InitAEC();
+  int ConfigTransport();
 
   TransportDelegate* FindTransport(int id);
 
