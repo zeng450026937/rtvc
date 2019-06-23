@@ -55,12 +55,6 @@ std::string tune_file = "D:\\workspace\\rtvc\\src\\yealink\\third_party\\ipvp\\a
 
 }  // namespace
 
-AudioEngineDelegate* AudioEngineDelegate::Instance() {
-  static AudioEngineDelegate* const audio_engine_delegate =
-      new AudioEngineDelegate();
-  return audio_engine_delegate;
-}
-
 AudioEngineDelegate::AudioEngineDelegate() {
   RTC_LOG(LS_INFO) << "AudioEngineDelegate()";
   // init lib

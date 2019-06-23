@@ -9,8 +9,9 @@
 #include "rtc_base/copy_on_write_buffer.h"
 #include "rtc_base/critical_section.h"
 #include "rtc_base/thread.h"
-#include "rtc_base/thread_checker.h"
 #include "rtc_base/thread_annotations.h"
+
+#include "rtc_base/third_party/sigslot/sigslot.h"
 
 namespace yealink {
 
@@ -30,14 +31,15 @@ class TransportDelegate {
 
   rtc::CopyOnWriteBuffer Take();
 
+  sigslot::signal0<> SignalPacketReceived;
+
  protected:
   webrtc::Transport* transport_;
 
   int id_;
   bool is_rtcp_;
 
-  rtc::ThreadChecker thread_checker_;
-  rtc::Thread worker_thread_;
+  rtc::Thread* worker_thread_;
   rtc::AsyncInvoker invoker_;
 
   rtc::CriticalSection buffer_crit_;

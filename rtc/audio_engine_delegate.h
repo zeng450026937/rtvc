@@ -3,6 +3,8 @@
 
 #include <map>
 
+#include "api/scoped_refptr.h"
+
 #include "yealink/rtc/transport_delegate.h"
 
 namespace yealink {
@@ -14,18 +16,18 @@ class AudioEngineConfig {
 
 class AudioEngineDelegate {
  public:
-  static AudioEngineDelegate* Instance();
+  AudioEngineDelegate::AudioEngineDelegate();
+  AudioEngineDelegate::~AudioEngineDelegate();
 
   void RegisterTransport(TransportDelegate* transport);
   void DeRegisterTransport(TransportDelegate* transport);
+
+  rtc::scoped_refptr<AudioSession> CreateAudioSession();
 
   void OnPacketRecived(TransportDelegate* transport,
                        rtc::CopyOnWriteBuffer* packet);
 
  private:
-  AudioEngineDelegate::AudioEngineDelegate();
-  AudioEngineDelegate::~AudioEngineDelegate();
-
   int InitDev();
   int InitLib();
   int InitAEC();
