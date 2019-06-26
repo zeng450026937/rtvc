@@ -3,6 +3,7 @@
 #include <map>
 #include <string>
 
+#include "absl/types/optional.h"
 #include "rtc_base/checks.h"
 #include "rtc_base/logging.h"
 
@@ -51,7 +52,8 @@ VideoEngineDelegate* VideoEngineDelegate::Instance() {
   return video_engine_delegate;
 }
 
-VideoEngineDelegate::VideoEngineDelegate() {
+VideoEngineDelegate::VideoEngineDelegate()
+    : worker_thread_(rtc::Thread::Current()) {
   RTC_LOG(LS_INFO) << "VideoEngineDelegate()";
   multimedia::MultimediaLogApi::SetLogCallback(video_engine_log_hub);
   multimedia::VideoSessionGlobalApi::StartUp(video_engine_event_hub);
@@ -63,26 +65,47 @@ VideoEngineDelegate::~VideoEngineDelegate() {
 }
 
 void VideoEngineDelegate::RegisterTransport(TransportDelegate* transport) {
+  // if (!worker_thread_->IsCurrent()) {
+  //   return worker_thread_->Invoke<void>(
+  //       RTC_FROM_HERE, [&] { return RegisterTransport(transport); });
+  // }
+
   RTC_DCHECK(transport);
-  transports_.emplace(transport->id(), transport);
+  transport->SignalPacketReceived.connect(
+      this, &VideoEngineDelegate::OnPacketReceived);
+  transports_.emplace(transport->hash(), transport);
 }
 void VideoEngineDelegate::DeRegisterTransport(TransportDelegate* transport) {
+  // if (!worker_thread_->IsCurrent()) {
+  //   return worker_thread_->Invoke<void>(
+  //       RTC_FROM_HERE, [&] { return DeRegisterTransport(transport); });
+  // }
+
   RTC_DCHECK(transport);
-  transports_.erase(transport->id());
+  transport->SignalPacketReceived.disconnect(this);
+  transports_.erase(transport->hash());
 }
 
-void VideoEngineDelegate::OnPacketRecived(TransportDelegate* transport,
-                                          rtc::CopyOnWriteBuffer* data) {
-  RTC_DCHECK(data);
+void VideoEngineDelegate::OnPacketReceived() {
   event_.Set();
 }
 
 int VideoEngineDelegate::GetHandle(multimedia::VideoTransportHandle handle) {
-  return FindTransport(handle) != nullptr ? 0 : -1;
+  // if (!worker_thread_->IsCurrent()) {
+  //   return worker_thread_->Invoke<int>(RTC_FROM_HERE,
+  //                                      [&] { return GetHandle(handle); });
+  // }
+  RTC_DCHECK(FindTransport(handle));
+  return 0;
 };
 int VideoEngineDelegate::ReleaseHandle(
     multimedia::VideoTransportHandle handle) {
-  RTC_DCHECK(FindTransport(handle));
+  // if (!worker_thread_->IsCurrent()) {
+  //   return worker_thread_->Invoke<int>(RTC_FROM_HERE,
+  //                                      [&] { return ReleaseHandle(handle);
+  //                                      });
+  // }
+  // RTC_DCHECK(FindTransport(handle));
   return 0;
 };
 
@@ -90,10 +113,14 @@ int VideoEngineDelegate::Select(
     const multimedia::VideoTransportHandleSet& check_set,
     multimedia::VideoTransportHandleSet& recv_set,
     const multimedia::VideoTransportTimeValue& timeout) {
+  RTC_LOG(LS_INFO) << "Select";
+  // if (!worker_thread_->IsCurrent()) {
+  //   return worker_thread_->Invoke<int>(
+  //       RTC_FROM_HERE, [&] { return Select(check_set, recv_set, timeout); });
+  // }
   int recv_count = 0;
   int wait_time =
       static_cast<int>(timeout.secs * 1000 + timeout.micro_secs / 1000);
-      //毫秒
   bool is_timeout = false;
 
   while (!is_timeout && recv_count == 0) {
@@ -104,13 +131,18 @@ int VideoEngineDelegate::Select(
         continue;
       }
 
-      if (it->second->HasBufferedPacket()) {
-        recv_set.handle_array[recv_count] = it->first;
-        recv_set.handle_num = ++recv_count;
+      bool has_bufferred = it->second->has_bufferred();
+
+      if (!has_bufferred) {
+        continue;
       }
+
+      recv_set.handle_array[recv_count] = it->first;
+      recv_set.handle_num = ++recv_count;
     }
 
     if (recv_count == 0) {
+      RTC_LOG(LS_INFO) << "Wait";
       is_timeout = !event_.Wait(wait_time);
       event_.Reset();
     }
@@ -121,37 +153,45 @@ int VideoEngineDelegate::Select(
 int VideoEngineDelegate::Recv(multimedia::VideoTransportHandle handle,
                               char*& buffer,
                               int& buf_len) {
+  RTC_LOG(LS_INFO) << "Recv";
+  // if (!worker_thread_->IsCurrent()) {
+  //   return worker_thread_->Invoke<int>(
+  //       RTC_FROM_HERE, [&] { return Recv(handle, buffer, buf_len); });
+  // }
   auto transport = FindTransport(handle);
+
   RTC_DCHECK(transport) << "Receive packet on unknown transport.";
-  RTC_CHECK_GT(transport->HasBufferedPacket(), 0)
-      << "No buffered packet in this transport.";
 
-  rtc::CopyOnWriteBuffer packet = transport->Take();
+  absl::optional<rtc::CopyOnWriteBuffer> packet = transport->Take();
+
+  RTC_DCHECK(packet) << "No buffered packet in this transport.";
+
   // use cdata() to avoid making data copied
-  buffer = const_cast<char*>(packet.cdata<char>());
-  buf_len = packet.size();
+  buffer = const_cast<char*>(packet.value().cdata<char>());
+  buf_len = packet.value().size();
 
-  {
-    rtc::CritScope cs(&packet_crit_);
-    pending_packets_.emplace(buffer, packet);
-  }
+  pending_packets_.emplace(buffer, packet.value());
 
   return buf_len;
 };
 int VideoEngineDelegate::ReleaseRecvBuffer(
     multimedia::VideoTransportHandle handle,
     char* buffer) {
-  {
-    rtc::CritScope cs(&packet_crit_);
-    pending_packets_.erase(buffer);
-  }
-
+  // if (!worker_thread_->IsCurrent()) {
+  //   return worker_thread_->Invoke<int>(
+  //       RTC_FROM_HERE, [&] { return ReleaseRecvBuffer(handle, buffer); });
+  // }
+  pending_packets_.erase(buffer);
   return 0;
 };
 
 int VideoEngineDelegate::Send(multimedia::VideoTransportHandle handle,
                               const char* buffer,
                               int buf_len) {
+  // if (!worker_thread_->IsCurrent()) {
+  //   return worker_thread_->Invoke<int>(
+  //       RTC_FROM_HERE, [&] { return Send(handle, buffer, buf_len); });
+  // }
   auto transport = FindTransport(handle);
   RTC_DCHECK(transport) << "Send packet on unknown transport.";
 

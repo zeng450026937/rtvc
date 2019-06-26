@@ -5,13 +5,13 @@
 
 #include "yealink/rtc/transport_delegate.h"
 
+#include "media/base/codec.h"
 #include "rtc_base/constructor_magic.h"
 #include "rtc_base/copy_on_write_buffer.h"
-#include "rtc_base/critical_section.h"
 #include "rtc_base/event.h"
 #include "rtc_base/logging.h"
-#include "rtc_base/synchronization/rw_lock_wrapper.h"
-#include "media/base/codec.h"
+#include "rtc_base/thread.h"
+#include "rtc_base/third_party/sigslot/sigslot.h"
 
 #include "yealink/rtc/video/avc_session.h"
 
@@ -19,16 +19,16 @@
 
 namespace yealink {
 
-class VideoEngineDelegate : public multimedia::VideoExternalTransportSink {
+class VideoEngineDelegate : public multimedia::VideoExternalTransportSink,
+                            public sigslot::has_slots<> {
  public:
   static VideoEngineDelegate* Instance();
 
   void RegisterTransport(TransportDelegate* transport);
   void DeRegisterTransport(TransportDelegate* transport);
 
-  void OnPacketRecived(TransportDelegate* transport,
-                       rtc::CopyOnWriteBuffer* packet);
-
+  void OnPacketReceived();
+  
  protected:
   // impl VideoExternalTransportSink
   int GetHandle(multimedia::VideoTransportHandle handle) override;
@@ -57,12 +57,10 @@ class VideoEngineDelegate : public multimedia::VideoExternalTransportSink {
   TransportDelegate* FindTransport(int id);
 
   rtc::Event event_;
+  rtc::Thread* worker_thread_;
 
-  std::map<int, TransportDelegate*> transports_;
-
-  rtc::CriticalSection packet_crit_;
-  std::map<char*, rtc::CopyOnWriteBuffer> pending_packets_
-      RTC_GUARDED_BY(packet_crit_);
+  std::map<size_t, TransportDelegate*> transports_;
+  std::map<char*, rtc::CopyOnWriteBuffer> pending_packets_;
 
   RTC_DISALLOW_COPY_AND_ASSIGN(VideoEngineDelegate);
 };

@@ -1304,8 +1304,7 @@ void YealinkVideoChannel::FillSendAndReceiveCodecStats(
 void YealinkVideoChannel::OnPacketReceived(rtc::CopyOnWriteBuffer* packet,
                                            int64_t packet_time_us) {
   RTC_DCHECK_RUN_ON(&thread_checker_);
-  avc_session_->DeliverPacket(packet, false);
-  return;
+  avc_session_->DeliverPacket(packet, false); return;
   const webrtc::PacketReceiver::DeliveryStatus delivery_result =
       call_->Receiver()->DeliverPacket(webrtc::MediaType::VIDEO, *packet,
                                        packet_time_us);
@@ -1366,8 +1365,7 @@ void YealinkVideoChannel::OnPacketReceived(rtc::CopyOnWriteBuffer* packet,
 void YealinkVideoChannel::OnRtcpReceived(rtc::CopyOnWriteBuffer* packet,
                                          int64_t packet_time_us) {
   RTC_DCHECK_RUN_ON(&thread_checker_);
-  avc_session_->DeliverPacket(packet, true);
-  return;
+  avc_session_->DeliverPacket(packet, true); return;
   // TODO(pbos): Check webrtc::PacketReceiver::DELIVERY_OK once we deliver
   // for both audio and video on the same path. Since BundleFilter doesn't
   // filter RTCP anymore incoming RTCP packets could've been going to audio (so

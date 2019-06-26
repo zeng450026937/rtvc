@@ -11,6 +11,7 @@
 #include "yealink/rtc/video/video_frame.h"
 #include "yealink/rtc/video/video_sink.h"
 #include "yealink/rtc/video/video_source_adapter.h"
+#include "yealink/rtc/video_engine_delegate.h"
 #include "yealink/rtc/yealink_video_engine.h"
 
 #include "yealink/third_party/vie/include/video_avc_session.h"
@@ -36,30 +37,38 @@ class AVCSessionInternal : public AVCSession,
         session_(nullptr),
         rtp_transport_(std::move(rtp_transport)),
         rtcp_transport_(std::move(rtcp_transport)) {
+    VideoEngineDelegate::Instance()->RegisterTransport(rtp_transport_.get());
+    VideoEngineDelegate::Instance()->RegisterTransport(rtcp_transport_.get());
     RTC_LOG(LS_INFO) << "AVCSessionInternal()";
     MaybeRecreateSession();
     MaybeInitSession();
     RTC_DCHECK(session_);
-    
+
     session_->StartSession(GetSessionDirection());
     started_ = true;
   }
   ~AVCSessionInternal() override {
     RTC_LOG(LS_INFO) << "~AVCSessionInternal()";
+    rtp_transport_->Flush();
+    rtcp_transport_->Flush();
     if (session_) {
       session_->DisconnectToDeliverySink(this);
       session_->DisconncetToFrameProvider(this);
       session_->StopSession();
       multimedia::IAVCSessionApi::DestroyInstance(session_);
     }
+    VideoEngineDelegate::Instance()->DeRegisterTransport(rtp_transport_.get());
+    VideoEngineDelegate::Instance()->DeRegisterTransport(rtcp_transport_.get());
+
     RTC_LOG(LS_INFO) << "~AVCSessionInternal()!!";
   };
 
   int id() { return id_; }
 
   void DeliverPacket(rtc::CopyOnWriteBuffer* packet, bool rtcp) override {
+    RTC_LOG(LS_INFO) << "DeliverPacket";
     auto transport = rtcp ? rtcp_transport_.get() : rtp_transport_.get();
-    transport->OnPacketReceived(packet);
+    transport->ReceivePacket(packet);
   }
 
   void SetSource(
@@ -144,8 +153,8 @@ class AVCSessionInternal : public AVCSession,
 
     config.codecs.determined_recv_codec.codec_type =
         multimedia::VIDEO_CODEC_H264;
-    config.codecs.determined_recv_codec.height = 720;
-    config.codecs.determined_recv_codec.width = 1080;
+    config.codecs.determined_recv_codec.height = 480;
+    config.codecs.determined_recv_codec.width = 640;
     config.codecs.determined_recv_codec.key_frame_interval = 0;
     config.codecs.determined_recv_codec.packet_mtu_size = 1200;
     config.codecs.determined_recv_codec.payload_type = 97;
@@ -153,8 +162,8 @@ class AVCSessionInternal : public AVCSession,
         multimedia::VIDEO_CODEC_PROFILE_BASE;
     config.codecs.determined_recv_codec.slice_mode =
         multimedia::VIDEO_CODEC_SLICE_SINGLE;
-    config.codecs.determined_recv_codec.target_bitrate = 244800;
-    config.codecs.determined_recv_codec.target_framerate = 30;
+    config.codecs.determined_recv_codec.target_bitrate = 2448000;
+    config.codecs.determined_recv_codec.target_framerate = 60;
 
     config.codecs.available_recv_codecs_num = 1;
     config.codecs.available_recv_codecs[0] =
@@ -162,8 +171,8 @@ class AVCSessionInternal : public AVCSession,
 
     config.codecs.determined_send_codec.codec_type =
         multimedia::VIDEO_CODEC_H264;
-    config.codecs.determined_send_codec.height = 720;
-    config.codecs.determined_send_codec.width = 1080;
+    config.codecs.determined_send_codec.height = 480;
+    config.codecs.determined_send_codec.width = 640;
     config.codecs.determined_send_codec.key_frame_interval = 0;
     config.codecs.determined_send_codec.packet_mtu_size = 1200;
     config.codecs.determined_send_codec.payload_type = 97;
@@ -171,8 +180,8 @@ class AVCSessionInternal : public AVCSession,
         multimedia::VIDEO_CODEC_PROFILE_BASE;
     config.codecs.determined_send_codec.slice_mode =
         multimedia::VIDEO_CODEC_SLICE_SINGLE;
-    config.codecs.determined_send_codec.target_bitrate = 244800;
-    config.codecs.determined_send_codec.target_framerate = 30;
+    config.codecs.determined_send_codec.target_bitrate = 2448000;
+    config.codecs.determined_send_codec.target_framerate = 60;
 
     config.codecs.available_send_codecs_num = 1;
     config.codecs.available_send_codecs[0] =
@@ -190,8 +199,8 @@ class AVCSessionInternal : public AVCSession,
 
     config.transport_config.transport_type =
         multimedia::MediaTransportType::MEDIA_TRANSPORT_TYPE_EXTERNAL;
-    config.transport_config.rtp_handle = rtp_transport_->id();
-    config.transport_config.rtcp_handle = rtcp_transport_->id();
+    config.transport_config.rtp_handle = rtp_transport_->hash();
+    config.transport_config.rtcp_handle = rtcp_transport_->hash();
 
     config.rtcp_pars.flow_control_method =
         multimedia::VideoFlowControlMethod::FLOWCTL_NONE;
@@ -285,10 +294,14 @@ AVCSessionFactory::~AVCSessionFactory() {
 
 rtc::scoped_refptr<AVCSession> AVCSessionFactory::CreateAVCSession(
     cricket::YealinkVideoChannel* channel) {
+  auto rtp_transport = absl::make_unique<TransportDelegate>(false);
+  rtp_transport->SetTransport(channel);
+  auto rtcp_transport = absl::make_unique<TransportDelegate>(true);
+  rtcp_transport->SetTransport(channel);
+
   return new rtc::RefCountedObject<AVCSessionInternal>(
       multimedia::VideoSessionType::VIDEO_SESSION_CAMERA,
-      absl::make_unique<TransportDelegate>(channel, false /* rtp_transport */),
-      absl::make_unique<TransportDelegate>(channel, true /* rtcp_transport */));
+      std::move(rtp_transport), std::move(rtcp_transport));
 }
 
 }  // namespace yealink

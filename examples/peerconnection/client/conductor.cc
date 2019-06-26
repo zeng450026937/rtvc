@@ -45,9 +45,9 @@
 #include "rtc_base/strings/json.h"
 #include "test/vcm_capturer.h"
 
-#include "yealink/third_party/vie/include/multimedia_interface.h"
-#include "yealink/rtc/video/video_source_adapter.h"
-#include "yealink/rtc/video/video_track_source.h"
+// #include "yealink/third_party/vie/include/multimedia_interface.h"
+// #include "yealink/rtc/video/video_source_adapter.h"
+// #include "yealink/rtc/video/video_track_source.h"
 
 namespace {
 // Names used for a IceCandidate JSON object.
@@ -97,45 +97,45 @@ class CapturerTrackSource : public webrtc::VideoTrackSource {
     return nullptr;
   }
 
-  static rtc::scoped_refptr<webrtc::VideoTrackSourceInterface> CreateUseYealink() {
-    const size_t kWidth = 640;
-    const size_t kHeight = 480;
-    const size_t kFps = 30;
+  // static rtc::scoped_refptr<webrtc::VideoTrackSourceInterface> CreateUseYealink() {
+  //   const size_t kWidth = 640;
+  //   const size_t kHeight = 480;
+  //   const size_t kFps = 30;
 
-    const int kMaxDeviceCount = 10;
-    int device_count = 0;
-    multimedia::VideoCameraDeviceDescriptor devices[kMaxDeviceCount];
-    multimedia::IVideoCameraDeviceAccess::EnumCameraDevices(
-      devices, 10, device_count
-    );
+  //   const int kMaxDeviceCount = 10;
+  //   int device_count = 0;
+  //   multimedia::VideoCameraDeviceDescriptor devices[kMaxDeviceCount];
+  //   multimedia::IVideoCameraDeviceAccess::EnumCameraDevices(
+  //     devices, 10, device_count
+  //   );
 
-    multimedia::IVideoCaptureSource* source;
-    multimedia::IVideoCaptureSource::CreateInstance(source);
+  //   multimedia::IVideoCaptureSource* source;
+  //   multimedia::IVideoCaptureSource::CreateInstance(source);
 
-    multimedia::VideoCaptureSourceInfo constraints;
+  //   multimedia::VideoCaptureSourceInfo constraints;
 
-    constraints.capture_type = multimedia::VIDEO_CAPTURE_SOURCE_CAMERA;
-    constraints.format.width = kWidth;
-    constraints.format.height = kHeight;
-    constraints.format.frame_rate = kFps;
-    constraints.format.raw_type = multimedia::VIDEO_RAW_DATA_I420;
-    constraints.camera_param.unique_id = devices[0].unique_id;
-    constraints.camera_param.camera_format = multimedia::VideoCameraCaptureFormat();
+  //   constraints.capture_type = multimedia::VIDEO_CAPTURE_SOURCE_CAMERA;
+  //   constraints.format.width = kWidth;
+  //   constraints.format.height = kHeight;
+  //   constraints.format.frame_rate = kFps;
+  //   constraints.format.raw_type = multimedia::VIDEO_RAW_DATA_I420;
+  //   constraints.camera_param.unique_id = devices[0].unique_id;
+  //   constraints.camera_param.camera_format = multimedia::VideoCameraCaptureFormat();
 
-    source->Start(constraints);
+  //   source->Start(constraints);
     
-    rtc::scoped_refptr<webrtc::VideoTrackSourceInterface> track_source =
-     new rtc::RefCountedObject<yealink::VideoTrackSource>(source, false, false);
+  //   rtc::scoped_refptr<webrtc::VideoTrackSourceInterface> track_source =
+  //    new rtc::RefCountedObject<yealink::VideoTrackSource>(source, false, false);
 
-    return track_source;
-  }
+  //   return track_source;
+  // }
 
-  static rtc::scoped_refptr<webrtc::VideoTrackSourceInterface> CreateWithSource(multimedia::VideoFrameProvider* source) {   
-    rtc::scoped_refptr<webrtc::VideoTrackSourceInterface> track_source =
-     new rtc::RefCountedObject<yealink::VideoTrackSource>(source, false, false);
+  // static rtc::scoped_refptr<webrtc::VideoTrackSourceInterface> CreateWithSource(multimedia::VideoFrameProvider* source) {   
+  //   rtc::scoped_refptr<webrtc::VideoTrackSourceInterface> track_source =
+  //    new rtc::RefCountedObject<yealink::VideoTrackSource>(source, false, false);
 
-    return track_source;
-  }
+  //   return track_source;
+  // }
 
  protected:
   explicit CapturerTrackSource(

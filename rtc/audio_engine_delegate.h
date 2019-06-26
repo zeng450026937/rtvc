@@ -4,7 +4,12 @@
 #include <map>
 
 #include "api/scoped_refptr.h"
+#include "rtc_base/message_handler.h"
+#include "rtc_base/message_queue.h"
+#include "rtc_base/socket_address.h"
+#include "rtc_base/third_party/sigslot/sigslot.h"
 
+#include "yealink/rtc/audio/audio_session.h"
 #include "yealink/rtc/transport_delegate.h"
 
 namespace yealink {
@@ -14,34 +19,34 @@ class AudioEngineConfig {
   static void Setup();
 };
 
-class AudioEngineDelegate {
+class AudioEngineDelegate : public rtc::MessageHandler,
+                            public sigslot::has_slots<> {
  public:
+  static AudioEngineDelegate* Instance();
+
   AudioEngineDelegate::AudioEngineDelegate();
   AudioEngineDelegate::~AudioEngineDelegate();
 
   void RegisterTransport(TransportDelegate* transport);
   void DeRegisterTransport(TransportDelegate* transport);
 
-  rtc::scoped_refptr<AudioSession> CreateAudioSession();
+  TransportDelegate* FindTransport(size_t hash);
+  TransportDelegate* FindTransport(const rtc::SocketAddress& address);
 
-  void OnPacketRecived(TransportDelegate* transport,
-                       rtc::CopyOnWriteBuffer* packet);
+ protected:
+  void OnMessage(rtc::Message* msg) override;
+  void OnPacketReceived();
 
  private:
-  int InitDev();
-  int InitLib();
-  int InitAEC();
-  int ConfigTransport();
+  int Init();
+  int Ready();
+  
+  bool ready_ = false;
+  std::map<size_t, TransportDelegate*> transports_;
+  int64_t reschedule_at_;
 
-  TransportDelegate* FindTransport(int id);
-
-  rtc::Event event_;
-
-  std::map<int, TransportDelegate*> transports_;
-
-  rtc::CriticalSection packet_crit_;
-  std::map<char*, rtc::CopyOnWriteBuffer> pending_packets_
-      RTC_GUARDED_BY(packet_crit_);
+  webrtc::AudioFrame in_frame_;
+  webrtc::AudioFrame out_frame_;
 
   RTC_DISALLOW_COPY_AND_ASSIGN(AudioEngineDelegate);
 };

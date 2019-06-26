@@ -5,11 +5,11 @@ rtc_include_tests = false
 rtc_build_examples = false
 rtc_build_tools = false
 rtc_enable_protobuf = true
-rtc_build_ssl = false
+rtc_build_ssl = true
 rtc_ssl_root = "//yealink/third_party/openssl/include"
 use_custom_libcxx = false
 use_rtti = true
 
 declare_args() {
-  yealink_build_examples = rtc_build_examples
+  yealink_build_examples = true
 }
