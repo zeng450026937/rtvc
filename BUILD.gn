@@ -6,8 +6,9 @@ group("yealink") {
 
   deps = [
     ":rtc_base",
-    ":audio_device",
-    ":webrtc_sdp",
+    ":rtc_base_approved",
+    ":common_audio",
+    ":common_video",
     ":rtvc",
   ]
 
@@ -22,26 +23,31 @@ rtc_static_library("rtc_base") {
   complete_static_lib = true
   suppressed_configs += [ "//build/config/compiler:thin_archive" ]
   deps = [
-    "//rtc_base",
+    "//rtc_base:rtc_base",
   ]
 }
 
-rtc_static_library("audio_device") {
+rtc_static_library("rtc_base_approved") {
   complete_static_lib = true
   suppressed_configs += [ "//build/config/compiler:thin_archive" ]
   deps = [
-    "//modules/audio_device"
+    "//rtc_base:rtc_base_approved",
   ]
 }
 
-rtc_static_library("webrtc_sdp") {
+rtc_static_library("common_audio") {
   complete_static_lib = true
   suppressed_configs += [ "//build/config/compiler:thin_archive" ]
-  sources = [
-    "//pc/webrtc_sdp.cc",
-    "//pc/webrtc_sdp.h",
-  ]
   deps = [
+    "//common_audio:common_audio",
+  ]
+}
+
+rtc_static_library("common_video") {
+  complete_static_lib = true
+  suppressed_configs += [ "//build/config/compiler:thin_archive" ]
+  deps = [
+    "//common_video:common_video",
   ]
 }
 

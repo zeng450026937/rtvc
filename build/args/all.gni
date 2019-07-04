@@ -11,5 +11,5 @@ use_custom_libcxx = false
 use_rtti = true
 
 declare_args() {
-  yealink_build_examples = true
+  yealink_build_examples = rtc_build_examples
 }
